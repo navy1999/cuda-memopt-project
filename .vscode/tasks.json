@@ -1,0 +1,35 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build CUDA Project",
+            "type": "shell",
+            "command": "nvcc",
+            "args": [
+                "${workspaceFolder}/src/matmul_naive.cu",
+                "-o",
+                "${workspaceFolder}/build/matmul_naive.exe"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Build CUDA Project (Tiled)",
+            "type": "shell",
+            "command": "nvcc",
+            "args": [
+                "${workspaceFolder}/src/matmul_tiled.cu",
+                "-o",
+                "${workspaceFolder}/build/matmul_tiled.exe"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": []
+        }
+    ]
+}

@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug matmul_naive",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "preLaunchTask": "Build CUDA Project",
+            "program": "${workspaceFolder}/build/matmul_naive.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "console": "externalTerminal"
+        },
+        {
+            "name": "Debug matmul_tiled",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "preLaunchTask": "Build CUDA Project (Tiled)",
+            "program": "${workspaceFolder}/build/matmul_tiled.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "console": "externalTerminal"
+        }
+    ]
+}
