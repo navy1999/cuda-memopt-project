@@ -1,7 +1,7 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <cuda_runtime.h>
 
-#define N 1024
 #define TILE_SIZE 16
 
 __global__ void matmul_tiled(float *A, float *B, float *C, int n) {
@@ -13,7 +13,6 @@ __global__ void matmul_tiled(float *A, float *B, float *C, int n) {
     float sum = 0.0f;
 
     for (int t = 0; t < n / TILE_SIZE; ++t) {
-        // Coalesced global memory access
         As[threadIdx.y][threadIdx.x] = A[row * n + t * TILE_SIZE + threadIdx.x];
         Bs[threadIdx.y][threadIdx.x] = B[(t * TILE_SIZE + threadIdx.y) * n + col];
         __syncthreads();
@@ -25,54 +24,76 @@ __global__ void matmul_tiled(float *A, float *B, float *C, int n) {
     C[row * n + col] = sum;
 }
 
-int main() {
-    int size = N * N * sizeof(float);
-    float *A, *B, *C;
-    float *d_A, *d_B, *d_C;
-
-    A = (float*)malloc(size);
-    B = (float*)malloc(size);
-    C = (float*)malloc(size);
-
-    for (int i = 0; i < N*N; ++i) {
-        A[i] = 1.0f;
-        B[i] = 2.0f;
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        printf("Usage: %s <matrix_size>\n", argv[0]);
+        return 1;
     }
 
+    const int N = atoi(argv[1]);
+    if (N % TILE_SIZE != 0) {
+        printf("Error: Matrix size must be a multiple of %d\n", TILE_SIZE);
+        return 1;
+    }
+
+    const int trials = 10;
+    const size_t size = N * N * sizeof(float);
+
+    // Allocate host memory
+    float *h_A = (float*)malloc(size);
+    float *h_B = (float*)malloc(size);
+    float *h_C = (float*)malloc(size);
+
+    // Initialize matrices
+    for (int i = 0; i < N*N; ++i) {
+        h_A[i] = 1.0f;
+        h_B[i] = 2.0f;
+    }
+
+    // Allocate device memory
+    float *d_A, *d_B, *d_C;
     cudaMalloc(&d_A, size);
     cudaMalloc(&d_B, size);
     cudaMalloc(&d_C, size);
 
-    cudaMemcpy(d_A, A, size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_B, B, size, cudaMemcpyHostToDevice);
+    // Copy data to device
+    cudaMemcpy(d_A, h_A, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_B, h_B, size, cudaMemcpyHostToDevice);
 
+    // Kernel configuration
     dim3 threadsPerBlock(TILE_SIZE, TILE_SIZE);
-    dim3 blocksPerGrid((N+TILE_SIZE-1)/TILE_SIZE, (N+TILE_SIZE-1)/TILE_SIZE);
+    dim3 blocksPerGrid(N / TILE_SIZE, N / TILE_SIZE);
 
-    // --- Timing Start ---
+    // Timing setup
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
-    cudaEventRecord(start, 0);
+    float total_ms = 0;
 
-    matmul_tiled<<<blocksPerGrid, threadsPerBlock>>>(d_A, d_B, d_C, N);
+    for (int i = 0; i < trials; ++i) {
+        cudaMemset(d_C, 0, size); // Reset output
+        cudaEventRecord(start, 0);
+        matmul_tiled<<<blocksPerGrid, threadsPerBlock>>>(d_A, d_B, d_C, N);
+        cudaEventRecord(stop, 0);
+        cudaEventSynchronize(stop);
+        
+        float ms;
+        cudaEventElapsedTime(&ms, start, stop);
+        total_ms += ms;
+    }
 
-    cudaEventRecord(stop, 0);
-    cudaEventSynchronize(stop);
-    // --- Timing End ---
+    // Copy result back
+    cudaMemcpy(h_C, d_C, size, cudaMemcpyDeviceToHost);
 
-    // Calculate and print elapsed time
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-    printf("[Tiled] Kernel execution time: %.3f ms\n", milliseconds);
+    printf("[Tiled] Matrix %dx%d - Avg time (%d trials): %.3f ms\n", 
+           N, N, trials, total_ms / trials);
+    printf("Validation: C[0] = %.1f\n", h_C[0]);
 
     // Cleanup
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
-    cudaMemcpy(C, d_C, size, cudaMemcpyDeviceToHost);
-    printf("C[0]=%f\n", C[0]);
-
     cudaFree(d_A); cudaFree(d_B); cudaFree(d_C);
-    free(A); free(B); free(C);
+    free(h_A); free(h_B); free(h_C);
+
     return 0;
 }
