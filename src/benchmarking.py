@@ -31,8 +31,8 @@ for size in matrix_sizes:
     naive_times = []
     tiled_times = []
     for _ in range(trials):
-        naive_time = run_program('./build/matmul_naive.exe', size)
-        tiled_time = run_program('./build/matmul_tiled.exe', size)
+        naive_time = run_program('../build/matmul_naive.exe', size)
+        tiled_time = run_program('../build/matmul_tiled.exe', size)
         if naive_time is not None:
             naive_times.append(naive_time)
         if tiled_time is not None:
