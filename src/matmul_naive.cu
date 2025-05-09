@@ -18,69 +18,58 @@ int main(int argc, char **argv) {
         printf("Usage: %s <matrix_size>\n", argv[0]);
         return 1;
     }
-
-    const int N = atoi(argv[1]);
+    int N = atoi(argv[1]);
     const int trials = 10;
-    const size_t size = N * N * sizeof(float);
+    size_t bytes = N * N * sizeof(float);
 
-    // Allocate host memory
-    float *h_A = (float*)malloc(size);
-    float *h_B = (float*)malloc(size);
-    float *h_C = (float*)malloc(size);
+    // Host allocations
+    float *h_A = (float*)malloc(bytes);
+    float *h_B = (float*)malloc(bytes);
+    float *h_C = (float*)malloc(bytes);
 
-    // Initialize matrices
     for (int i = 0; i < N*N; ++i) {
         h_A[i] = 1.0f;
         h_B[i] = 2.0f;
     }
 
-    // Allocate device memory
+    // Device allocations
     float *d_A, *d_B, *d_C;
-    cudaMalloc(&d_A, size);
-    cudaMalloc(&d_B, size);
-    cudaMalloc(&d_C, size);
+    cudaMalloc(&d_A, bytes); cudaMalloc(&d_B, bytes); cudaMalloc(&d_C, bytes);
 
-    // Copy data to device
-    cudaMemcpy(d_A, h_A, size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_B, h_B, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_A, h_A, bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_B, h_B, bytes, cudaMemcpyHostToDevice);
 
-    // Kernel configuration
-    dim3 threadsPerBlock(16, 16);
-    dim3 blocksPerGrid(
-        (N + threadsPerBlock.x - 1) / threadsPerBlock.x,
-        (N + threadsPerBlock.y - 1) / threadsPerBlock.y
-    );
+    dim3 block(16,16), grid((N+15)/16,(N+15)/16);
 
-    // Timing setup
+    // Timing
     cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
+    cudaEventCreate(&start); cudaEventCreate(&stop);
     float total_ms = 0;
 
-    for (int i = 0; i < trials; ++i) {
-        cudaMemset(d_C, 0, size); // Reset output
-        cudaEventRecord(start, 0);
-        matmul_naive<<<blocksPerGrid, threadsPerBlock>>>(d_A, d_B, d_C, N);
-        cudaEventRecord(stop, 0);
+    for (int t = 0; t < trials; ++t) {
+        cudaMemset(d_C, 0, bytes);
+        cudaEventRecord(start);
+        matmul_naive<<<grid,block>>>(d_A,d_B,d_C,N);
+        cudaError_t err = cudaGetLastError();
+        if (err != cudaSuccess) {
+            printf("Kernel launch failed: %s\n", cudaGetErrorString(err));
+            return 1;
+        }
+        cudaEventRecord(stop);
         cudaEventSynchronize(stop);
-        
-        float ms;
-        cudaEventElapsedTime(&ms, start, stop);
+        float ms; cudaEventElapsedTime(&ms, start, stop);
         total_ms += ms;
     }
 
-    // Copy result back
-    cudaMemcpy(h_C, d_C, size, cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_C, d_C, bytes, cudaMemcpyDeviceToHost);
 
-    printf("[Naive] Matrix %dx%d - Avg time (%d trials): %.3f ms\n", 
-           N, N, trials, total_ms / trials);
-    printf("Validation: C[0] = %.1f\n", h_C[0]);
+    printf("[Naive]  N=%d  AvgTime=%.3f ms\n", N, total_ms/trials);
+    printf("Validation C[0]=%.1f\n", h_C[0]);
+    fflush(stdout);
 
     // Cleanup
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
+    cudaEventDestroy(start); cudaEventDestroy(stop);
     cudaFree(d_A); cudaFree(d_B); cudaFree(d_C);
     free(h_A); free(h_B); free(h_C);
-
     return 0;
 }
