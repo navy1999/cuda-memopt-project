@@ -1,0 +1,4 @@
+{
+  "buildCommand": "node scripts/copy-data.js && next build",
+  "framework": "nextjs"
+}

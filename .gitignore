@@ -1,0 +1,31 @@
+build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+
+# LLVM pass build outputs
+llvm-pass/Release/
+llvm-pass/CMakeFiles/
+llvm-pass/**/*.dir/
+llvm-pass/**/*.vcxproj
+llvm-pass/**/*.vcxproj.filters
+llvm-pass/x64/
+llvm-pass/cmake_install.cmake
+
+# VS/VSCode and IDE caches
+.vs/
+*.vcxproj.user
+
+# CMake/VS intermediate artifacts
+*.obj
+*.pdb
+*.tlog
+
+# Python
+__pycache__/
+*.pyc
+
+# Next.js
+frontend/.next/
+frontend/node_modules/
+
