@@ -8,8 +8,8 @@ const path = require("path");
 
 const root = path.resolve(__dirname, "..");
 const publicDir = path.join(root, "public");
-const resultsSrc = path.join(root, "..", "results");
-const reportSrc = path.join(root, "..", "report");
+const resultsSrc = path.join(root, "cuda", "results");
+const reportSrc = path.join(root, "cuda", "report");
 const resultsDest = path.join(publicDir, "results");
 const reportDest = path.join(publicDir, "report");
 

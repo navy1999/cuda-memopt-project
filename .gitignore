@@ -1,22 +1,27 @@
+# Next.js (repo root)
+node_modules/
+.next/
+out/
 build/
-CMakeFiles/
-CMakeCache.txt
-cmake_install.cmake
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+.env*
 
-# LLVM pass build outputs
-llvm-pass/Release/
-llvm-pass/CMakeFiles/
-llvm-pass/**/*.dir/
-llvm-pass/**/*.vcxproj
-llvm-pass/**/*.vcxproj.filters
-llvm-pass/x64/
-llvm-pass/cmake_install.cmake
-
-# VS/VSCode and IDE caches
+# CUDA project (cuda/)
+cuda/build/
+cuda/CMakeFiles/
+cuda/CMakeCache.txt
+cuda/cmake_install.cmake
+cuda/llvm-pass/Release/
+cuda/llvm-pass/CMakeFiles/
+cuda/llvm-pass/**/*.dir/
+cuda/llvm-pass/**/*.vcxproj
+cuda/llvm-pass/**/*.vcxproj.filters
+cuda/llvm-pass/x64/
+cuda/llvm-pass/cmake_install.cmake
 .vs/
 *.vcxproj.user
-
-# CMake/VS intermediate artifacts
 *.obj
 *.pdb
 *.tlog
@@ -25,7 +30,6 @@ llvm-pass/cmake_install.cmake
 __pycache__/
 *.pyc
 
-# Next.js
-frontend/.next/
-frontend/node_modules/
-
+# Misc
+.DS_Store
+*.pem
