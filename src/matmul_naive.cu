@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <cuda_runtime.h>
+#include "cuda_utils.h"
 
 __global__ void matmul_naive(float *A, float *B, float *C, int n) {
     int row = blockIdx.y * blockDim.y + threadIdx.y;
@@ -19,8 +20,9 @@ int main(int argc, char **argv) {
         return 1;
     }
     int N = atoi(argv[1]);
+    if (N <= 0) { printf("Matrix size N must be positive.\n"); return 1; }
     const int trials = 10;
-    size_t bytes = N * N * sizeof(float);
+    size_t bytes = (size_t)N * N * sizeof(float);
 
     // Host allocations
     float *h_A = (float*)malloc(bytes);
@@ -34,10 +36,11 @@ int main(int argc, char **argv) {
 
     // Device allocations
     float *d_A, *d_B, *d_C;
-    cudaMalloc(&d_A, bytes); cudaMalloc(&d_B, bytes); cudaMalloc(&d_C, bytes);
-
-    cudaMemcpy(d_A, h_A, bytes, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_B, h_B, bytes, cudaMemcpyHostToDevice);
+    cudaCheck(cudaMalloc(&d_A, bytes));
+    cudaCheck(cudaMalloc(&d_B, bytes));
+    cudaCheck(cudaMalloc(&d_C, bytes));
+    cudaCheck(cudaMemcpy(d_A, h_A, bytes, cudaMemcpyHostToDevice));
+    cudaCheck(cudaMemcpy(d_B, h_B, bytes, cudaMemcpyHostToDevice));
 
     dim3 block(16,16), grid((N+15)/16,(N+15)/16);
 
@@ -47,7 +50,7 @@ int main(int argc, char **argv) {
     float total_ms = 0;
 
     for (int t = 0; t < trials; ++t) {
-        cudaMemset(d_C, 0, bytes);
+        cudaCheck(cudaMemset(d_C, 0, bytes));
         cudaEventRecord(start);
         matmul_naive<<<grid,block>>>(d_A,d_B,d_C,N);
         cudaError_t err = cudaGetLastError();
@@ -61,15 +64,18 @@ int main(int argc, char **argv) {
         total_ms += ms;
     }
 
-    cudaMemcpy(h_C, d_C, bytes, cudaMemcpyDeviceToHost);
+    cudaCheck(cudaMemcpy(h_C, d_C, bytes, cudaMemcpyDeviceToHost));
 
     printf("[Naive]  N=%d  AvgTime=%.3f ms\n", N, total_ms/trials);
     printf("Validation C[0]=%.1f\n", h_C[0]);
     fflush(stdout);
 
     // Cleanup
-    cudaEventDestroy(start); cudaEventDestroy(stop);
-    cudaFree(d_A); cudaFree(d_B); cudaFree(d_C);
+    cudaCheck(cudaEventDestroy(start));
+    cudaCheck(cudaEventDestroy(stop));
+    cudaCheck(cudaFree(d_A));
+    cudaCheck(cudaFree(d_B));
+    cudaCheck(cudaFree(d_C));
     free(h_A); free(h_B); free(h_C);
     return 0;
 }
